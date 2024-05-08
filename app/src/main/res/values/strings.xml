@@ -1,4 +1,9 @@
 <resources>
     <string name="app_name">Annual Leaves</string>
-    <string name="title_activity_login">LoginActivity</string>
+    <string name="authentication_failed">Authentication failed</string>
+    <string name="login">Login</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
+    <string name="icon_password_visible">Password Visible</string>
+    <string name="icon_password_hidden">Password Hidden</string>
 </resources>

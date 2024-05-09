@@ -6,4 +6,12 @@
     <string name="password">Password</string>
     <string name="icon_password_visible">Password Visible</string>
     <string name="icon_password_hidden">Password Hidden</string>
+    <string name="new_version">New version is downloading on the background</string>
+    <string name="logout">Logout</string>
+    <string name="no_leaves">No annual leaves found</string>
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="settings">Settings</string>
+    <string name="remaining_annual_leaves">Remaining Annual Leaves</string>
+    <string name="new_leave">New Leave</string>
 </resources>

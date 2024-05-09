@@ -9,8 +9,10 @@ class MainViewModel : ViewModel() {
     private val repository = Repository()
 
     fun getLeaves(year: String) = repository.getLeaves(year)
-    
+
     fun getTotalAnnualLeaves() = repository.getTotalAnnualLeaves()
+
+    fun setTotalAnnualLeaves(total: Int) = repository.setTotalAnnualLeaves(total)
 
     fun years() = repository.years()
 

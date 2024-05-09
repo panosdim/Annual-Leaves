@@ -39,17 +39,21 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -59,6 +63,8 @@ import com.panosdim.annualleaves.LoginActivity
 import com.panosdim.annualleaves.R
 import com.panosdim.annualleaves.data.MainViewModel
 import com.panosdim.annualleaves.paddingLarge
+import com.panosdim.annualleaves.paddingSmall
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -69,6 +75,12 @@ fun MainScreen(onComplete: BroadcastReceiver) {
     val viewModel: MainViewModel = viewModel()
     val listState = rememberLazyListState()
     val today = LocalDate.now()
+    val scope = rememberCoroutineScope()
+
+    val skipPartiallyExpanded by remember { mutableStateOf(true) }
+    val settingsSheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = skipPartiallyExpanded
+    )
 
     var selectedYear by remember { mutableIntStateOf(today.year) }
     var expandedYear by remember { mutableStateOf(false) }
@@ -97,8 +109,8 @@ fun MainScreen(onComplete: BroadcastReceiver) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Button(onClick = {
-                    // TODO: Open Settings Modal
+                OutlinedButton(onClick = {
+                    scope.launch { settingsSheetState.show() }
                 }) {
                     Icon(
                         Icons.Outlined.Settings,
@@ -206,13 +218,19 @@ fun MainScreen(onComplete: BroadcastReceiver) {
                             .padding(paddingLarge),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(totalAnnualLeaves.value.toString())
-                        Spacer(Modifier.padding(paddingLarge))
+                        Text(
+                            modifier = Modifier.padding(paddingSmall),
+                            text = totalAnnualLeaves.value.toString(),
+                            fontWeight = FontWeight.Bold
+                        )
+                        VerticalDivider(Modifier.padding(paddingSmall))
                         LinearProgressIndicator(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(paddingSmall),
                             progress = { 1.0f },
                         )
-
+                        Text(modifier = Modifier.padding(paddingSmall), text = "100%")
                     }
 
                     Row(
@@ -271,4 +289,6 @@ fun MainScreen(onComplete: BroadcastReceiver) {
     } ?: run {
         ProgressBar()
     }
+
+    SettingsSheet(bottomSheetState = settingsSheetState)
 }

@@ -51,16 +51,49 @@ class Repository {
         val dbRef =
             user?.let { database.getReference(it.uid).child(INFO).child(TOTAL_ANNUAL_LEAVES) }
 
-        dbRef?.get()?.addOnSuccessListener {
-            if (it.exists()) {
-                val total = it.value as Long
-                trySend(total.toInt())
-            } else {
-                trySend(20)
+        val listener = dbRef?.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                if (snapshot.exists()) {
+                    val total = snapshot.value as Long
+                    trySend(total.toInt())
+                } else {
+                    dbRef.setValue(20)
+                    trySend(20)
+                }
             }
-        }?.addOnFailureListener {
-            Log.e(TAG, "Error getting data", it)
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e(TAG, error.toString())
+                cancel()
+            }
+
+        })
+
+        listener?.let {
+            listeners.put(dbRef, it)
         }
+        awaitClose {
+            channel.close()
+            listener?.let {
+                dbRef.removeEventListener(it)
+                listeners.remove(dbRef, it)
+            }
+        }
+    }
+
+    fun setTotalAnnualLeaves(total: Int): Flow<Boolean> = callbackFlow {
+        val dbRef =
+            user?.let { database.getReference(it.uid).child(INFO).child(TOTAL_ANNUAL_LEAVES) }
+
+        dbRef?.setValue(total)
+            ?.addOnSuccessListener {
+                trySend(true)
+                cancel()
+            }
+            ?.addOnFailureListener {
+                trySend(false)
+                cancel()
+            }
 
         awaitClose {
             channel.close()

@@ -14,4 +14,7 @@
     <string name="settings">Settings</string>
     <string name="remaining_annual_leaves">Remaining Annual Leaves</string>
     <string name="new_leave">New Leave</string>
+    <string name="total_annual_leaves">Total Annual Leaves</string>
+    <string name="success_set_total_annual_leaves_toast">Successfully set total annual leaves</string>
+    <string name="error_set_total_annual_leaves_toast">Error setting total annual leaves</string>
 </resources>

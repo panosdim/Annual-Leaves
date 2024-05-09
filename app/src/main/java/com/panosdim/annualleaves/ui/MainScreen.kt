@@ -66,12 +66,12 @@ import com.panosdim.annualleaves.paddingLarge
 import com.panosdim.annualleaves.paddingSmall
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(onComplete: BroadcastReceiver) {
     val context = LocalContext.current
-    val resources = context.resources
     val viewModel: MainViewModel = viewModel()
     val listState = rememberLazyListState()
     val today = LocalDate.now()
@@ -91,6 +91,10 @@ fun MainScreen(onComplete: BroadcastReceiver) {
 
     val leaves by viewModel.getLeaves(selectedYear.toString())
         .collectAsStateWithLifecycle(initialValue = null)
+
+    fun calculateRemainingAnnualLeaves(): Int {
+        return totalAnnualLeaves.value - (leaves?.sumOf { it.days } ?: 0)
+    }
 
     leaves?.let {
         Column(
@@ -220,7 +224,7 @@ fun MainScreen(onComplete: BroadcastReceiver) {
                     ) {
                         Text(
                             modifier = Modifier.padding(paddingSmall),
-                            text = totalAnnualLeaves.value.toString(),
+                            text = calculateRemainingAnnualLeaves().toString(),
                             fontWeight = FontWeight.Bold
                         )
                         VerticalDivider(Modifier.padding(paddingSmall))
@@ -228,9 +232,12 @@ fun MainScreen(onComplete: BroadcastReceiver) {
                             modifier = Modifier
                                 .weight(1f)
                                 .padding(paddingSmall),
-                            progress = { 1.0f },
+                            progress = { calculateRemainingAnnualLeaves().toFloat() / totalAnnualLeaves.value.toFloat() },
                         )
-                        Text(modifier = Modifier.padding(paddingSmall), text = "100%")
+                        Text(
+                            modifier = Modifier.padding(paddingSmall),
+                            text = "${(calculateRemainingAnnualLeaves().toDouble() / totalAnnualLeaves.value.toDouble()).roundToInt() * 100}%"
+                        )
                     }
 
                     Row(

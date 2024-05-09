@@ -36,6 +36,7 @@ class Repository {
                 val endYear = today.plusYears(1).year
                 trySend((startYear.toInt()..endYear).toList())
             } else {
+                dbRef.setValue(today.year)
                 trySend(listOf(today.year, today.plusYears(1).year))
             }
         }?.addOnFailureListener {

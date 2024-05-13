@@ -1,5 +1,6 @@
 package com.panosdim.annualleaves.ui
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDateRangePickerState
@@ -33,11 +35,20 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.panosdim.annualleaves.R
 import com.panosdim.annualleaves.data.MainViewModel
+import com.panosdim.annualleaves.models.Leave
 import com.panosdim.annualleaves.paddingLarge
+import com.panosdim.annualleaves.utils.calculateWorkingDays
+import com.panosdim.annualleaves.utils.getHolidays
 import com.panosdim.annualleaves.utils.toEpochMilli
+import com.panosdim.annualleaves.utils.toLocalDate
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.time.DayOfWeek
+import java.time.Instant
 import java.time.LocalDate
 import java.time.Month
+import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -59,14 +70,27 @@ fun NewLeaveSheet(
         LocalDate.of(year, Month.JANUARY, 1).toEpochMilli()
     }
 
-
     // Sheet content
     if (bottomSheetState.isVisible) {
         val state = rememberDateRangePickerState(
             initialSelectedStartDateMillis = null,
             initialSelectedEndDateMillis = null,
-            yearRange = IntRange(year, year),
-            initialDisplayedMonthMillis = initialDisplayMonthMillis
+            yearRange = IntRange(year, year + 1),
+            initialDisplayedMonthMillis = initialDisplayMonthMillis,
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                    val date = Instant.ofEpochMilli(utcTimeMillis).atZone(ZoneId.systemDefault())
+                        .toLocalDate()
+                    val nextYearDate = LocalDate.of(year + 1, Month.MARCH, 31)
+
+                    val holidays = getHolidays(year)
+
+                    return (date.isBefore(nextYearDate) || date.isEqual(nextYearDate))
+                            && !holidays.contains(date)
+                            && date.dayOfWeek != DayOfWeek.SATURDAY
+                            && date.dayOfWeek != DayOfWeek.SUNDAY
+                }
+            }
         )
 
         ModalBottomSheet(
@@ -108,8 +132,42 @@ fun NewLeaveSheet(
                     Button(
                         enabled = state.selectedStartDateMillis != null && !isLoading,
                         onClick = {
+                            isLoading = true
 
+                            val newLeave = Leave(
+                                id = null,
+                                from = state.selectedStartDateMillis?.toLocalDate().toString(),
+                                until = state.selectedEndDateMillis?.toLocalDate().toString(),
+                                days = calculateWorkingDays(
+                                    state.selectedStartDateMillis?.toLocalDate(),
+                                    state.selectedEndDateMillis?.toLocalDate()
+                                )
+                            )
 
+                            scope.launch {
+                                viewModel.addLeave(year.toString(), newLeave)
+                                    .collect {
+                                        withContext(Dispatchers.Main) {
+                                            if (it) {
+                                                Toast.makeText(
+                                                    context,
+                                                    R.string.add_leave_result,
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+
+                                                scope.launch { bottomSheetState.hide() }
+                                            } else {
+                                                isLoading = false
+
+                                                Toast.makeText(
+                                                    context,
+                                                    R.string.generic_error_toast,
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            }
+                                        }
+                                    }
+                            }
                         },
                     ) {
                         Icon(

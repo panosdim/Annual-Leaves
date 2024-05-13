@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material3.CalendarLocale
-import androidx.compose.material3.DatePickerFormatter
 import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.DateRangePickerState
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,12 +30,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.panosdim.annualleaves.R
 import com.panosdim.annualleaves.paddingLarge
+import com.panosdim.annualleaves.utils.calculateWorkingDays
 import com.panosdim.annualleaves.utils.fromEpochMilli
-import java.time.Instant
-import java.time.ZoneId
+import com.panosdim.annualleaves.utils.toLocalDate
 import java.time.format.DateTimeFormatter
-
-val displayDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,7 +83,6 @@ fun OutlinedDateRangePicker(
                     DateRangePicker(
                         state = state,
                         modifier = Modifier.fillMaxWidth(),
-                        dateFormatter = CustomDatePickerFormatter(),
                     )
                 }
             }
@@ -107,10 +102,24 @@ fun OutlinedDateRangePicker(
             )
         },
         onValueChange = { },
+        supportingText = {
+            state.selectedStartDateMillis?.let { start ->
+                state.selectedEndDateMillis?.let { end ->
+                    Text(
+                        text = "Annual Leave Dates: " + calculateWorkingDays(
+                            start.toLocalDate(),
+                            end.toLocalDate()
+                        ).toString()
+                    )
+                }
+            }
+        }
     )
 }
 
 fun showRangeDate(startDateMilli: Long?, endDateMilli: Long?): String {
+    val displayDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy")
+
     if (startDateMilli == null || endDateMilli == null) {
         return ""
     }
@@ -118,31 +127,4 @@ fun showRangeDate(startDateMilli: Long?, endDateMilli: Long?): String {
     return "${
         startDateMilli.fromEpochMilli().format(displayDateFormatter)
     } - ${endDateMilli.fromEpochMilli().format(displayDateFormatter)}"
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-class CustomDatePickerFormatter : DatePickerFormatter {
-    override fun formatDate(
-        dateMillis: Long?,
-        locale: CalendarLocale,
-        forContentDescription: Boolean
-    ): String? {
-        return dateMillis?.let {
-            displayDateFormatter.format(
-                Instant.ofEpochMilli(it).atZone(
-                    ZoneId.systemDefault()
-                )
-            )
-        } ?: run { null }
-    }
-
-    override fun formatMonthYear(monthMillis: Long?, locale: CalendarLocale): String? {
-        return monthMillis?.let {
-            DateTimeFormatter.ofPattern("MMMM yyyy").format(
-                Instant.ofEpochMilli(it).atZone(
-                    ZoneId.systemDefault()
-                )
-            )
-        } ?: run { null }
-    }
 }

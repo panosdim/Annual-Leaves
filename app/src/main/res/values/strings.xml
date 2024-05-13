@@ -19,4 +19,6 @@
     <string name="error_set_total_annual_leaves_toast">Error setting total annual leaves</string>
     <string name="create">Create</string>
     <string name="save">Save</string>
+    <string name="add_leave_result">Annual leave added successfully</string>
+    <string name="generic_error_toast">Something went wrong. Try again.</string>
 </resources>

@@ -5,7 +5,7 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
 val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
-val displayDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
+val displayDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy")
 
 fun LocalDate.toEpochMilli(): Long {
     return this.toEpochDay() * (1000 * 60 * 60 * 24)

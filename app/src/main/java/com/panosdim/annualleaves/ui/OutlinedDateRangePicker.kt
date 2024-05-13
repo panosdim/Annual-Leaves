@@ -31,9 +31,9 @@ import androidx.compose.ui.window.DialogProperties
 import com.panosdim.annualleaves.R
 import com.panosdim.annualleaves.paddingLarge
 import com.panosdim.annualleaves.utils.calculateWorkingDays
+import com.panosdim.annualleaves.utils.displayDateFormatter
 import com.panosdim.annualleaves.utils.fromEpochMilli
 import com.panosdim.annualleaves.utils.toLocalDate
-import java.time.format.DateTimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,8 +118,6 @@ fun OutlinedDateRangePicker(
 }
 
 fun showRangeDate(startDateMilli: Long?, endDateMilli: Long?): String {
-    val displayDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy")
-
     if (startDateMilli == null || endDateMilli == null) {
         return ""
     }

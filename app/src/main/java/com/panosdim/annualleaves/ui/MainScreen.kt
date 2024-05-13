@@ -64,6 +64,7 @@ import com.panosdim.annualleaves.R
 import com.panosdim.annualleaves.data.MainViewModel
 import com.panosdim.annualleaves.paddingLarge
 import com.panosdim.annualleaves.paddingSmall
+import com.panosdim.annualleaves.utils.formatDate
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import kotlin.math.roundToInt
@@ -72,6 +73,7 @@ import kotlin.math.roundToInt
 @Composable
 fun MainScreen(onComplete: BroadcastReceiver) {
     val context = LocalContext.current
+    val resources = context.resources
     val viewModel: MainViewModel = viewModel()
     val listState = rememberLazyListState()
     val today = LocalDate.now()
@@ -107,7 +109,7 @@ fun MainScreen(onComplete: BroadcastReceiver) {
                 .systemBarsPadding()
                 .imePadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.Top
         ) {
             Row(
                 modifier = Modifier
@@ -155,6 +157,18 @@ fun MainScreen(onComplete: BroadcastReceiver) {
                 }
             }
 
+            Text(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = paddingLarge),
+                text = resources.getString(
+                    R.string.annual_leaves,
+                    selectedYear.toString()
+                ),
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.headlineMedium,
+            )
+
             // Show Leaves
             LazyColumn(
                 Modifier
@@ -167,7 +181,7 @@ fun MainScreen(onComplete: BroadcastReceiver) {
                         item {
                             ListItem(
                                 headlineContent = {
-                                    Text(it.from + " - " + it.until)
+                                    Text(it.from.formatDate() + " - " + it.until.formatDate())
                                 },
                                 trailingContent = {
                                     Text(
@@ -202,7 +216,7 @@ fun MainScreen(onComplete: BroadcastReceiver) {
                     }
                 }
             }
-            Spacer(Modifier.size(paddingLarge))
+            Spacer(Modifier.weight(1f))
             Card(
                 modifier = Modifier
                     .padding(paddingLarge)
@@ -239,7 +253,7 @@ fun MainScreen(onComplete: BroadcastReceiver) {
                         )
                         Text(
                             modifier = Modifier.padding(paddingSmall),
-                            text = "${(calculateRemainingAnnualLeaves().toDouble() / totalAnnualLeaves.value.toDouble()).roundToInt() * 100}%"
+                            text = "${((calculateRemainingAnnualLeaves().toFloat() / totalAnnualLeaves.value.toFloat()) * 100).roundToInt()}%"
                         )
                     }
 

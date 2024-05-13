@@ -17,4 +17,6 @@
     <string name="total_annual_leaves">Total Annual Leaves</string>
     <string name="success_set_total_annual_leaves_toast">Successfully set total annual leaves</string>
     <string name="error_set_total_annual_leaves_toast">Error setting total annual leaves</string>
+    <string name="create">Create</string>
+    <string name="save">Save</string>
 </resources>

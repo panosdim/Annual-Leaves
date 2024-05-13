@@ -5,9 +5,14 @@ import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
 val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+val displayDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
 
 fun LocalDate.toEpochMilli(): Long {
     return this.toEpochDay() * (1000 * 60 * 60 * 24)
+}
+
+fun Long.fromEpochMilli(): LocalDate {
+    return LocalDate.ofEpochDay(this / (1000 * 60 * 60 * 24))
 }
 
 fun Long.toLocalDate(): LocalDate {
@@ -26,12 +31,6 @@ fun String.toLocalDate(): LocalDate {
 }
 
 fun String.formatDate(): String {
-    val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
     val date = this.toLocalDate()
-    return date.format(dateFormatter) ?: ""
-}
-
-fun isDateInPreviousYear(date: LocalDate): Boolean {
-    val previousYear = LocalDate.now().year - 1
-    return date.year == previousYear
+    return date.format(displayDateFormatter) ?: ""
 }

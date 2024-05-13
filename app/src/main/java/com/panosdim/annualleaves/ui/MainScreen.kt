@@ -81,6 +81,9 @@ fun MainScreen(onComplete: BroadcastReceiver) {
     val settingsSheetState = rememberModalBottomSheetState(
         skipPartiallyExpanded = skipPartiallyExpanded
     )
+    val newLeaveSheetState = rememberModalBottomSheetState(
+        skipPartiallyExpanded = skipPartiallyExpanded
+    )
 
     var selectedYear by remember { mutableIntStateOf(today.year) }
     var expandedYear by remember { mutableStateOf(false) }
@@ -277,7 +280,7 @@ fun MainScreen(onComplete: BroadcastReceiver) {
                         }
 
                         Button(onClick = {
-                            // TODO: Open Add New Leave Modal
+                            scope.launch { newLeaveSheetState.show() }
                         }) {
                             Icon(
                                 Icons.Outlined.Add,
@@ -298,4 +301,5 @@ fun MainScreen(onComplete: BroadcastReceiver) {
     }
 
     SettingsSheet(bottomSheetState = settingsSheetState)
+    NewLeaveSheet(year = selectedYear, bottomSheetState = newLeaveSheetState)
 }

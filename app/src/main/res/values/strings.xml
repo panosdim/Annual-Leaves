@@ -22,4 +22,13 @@
     <string name="add_leave_result">Annual leave added successfully</string>
     <string name="generic_error_toast">Something went wrong. Try again.</string>
     <string name="annual_leaves">Annual leaves for %1$s</string>
+    <string name="edit_leave">Edit Leave</string>
+    <string name="delete_leave_dialog_title">Delete annual leave?</string>
+    <string name="delete_leave_dialog_description">If you delete the annual leave you will not be able to recover it.</string>
+    <string name="delete_leave_result">Annual leave deleted successfully</string>
+    <string name="confirm">Confirm</string>
+    <string name="dismiss">Dismiss</string>
+    <string name="delete">Delete</string>
+    <string name="update_leave_result">Annual leave updated successfully</string>
+    <string name="update">Update</string>
 </resources>

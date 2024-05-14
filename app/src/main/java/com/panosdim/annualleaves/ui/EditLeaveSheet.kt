@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -18,9 +20,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -52,8 +56,9 @@ import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NewLeaveSheet(
+fun EditLeaveSheet(
     year: Int,
+    leave: Leave,
     bottomSheetState: SheetState
 ) {
     val context = LocalContext.current
@@ -64,17 +69,18 @@ fun NewLeaveSheet(
         mutableStateOf(false)
     }
 
-    val initialDisplayMonthMillis = if (year == LocalDate.now().year) {
-        LocalDate.now().toEpochMilli()
-    } else {
-        LocalDate.of(year, Month.JANUARY, 1).toEpochMilli()
-    }
+    val openDeleteDialog = remember { mutableStateOf(false) }
+
+    val from = leave.from.toLocalDate()
+    val until = leave.until.toLocalDate()
+
+    val initialDisplayMonthMillis = from.toEpochMilli()
 
     // Sheet content
     if (bottomSheetState.isVisible) {
         val state = rememberDateRangePickerState(
-            initialSelectedStartDateMillis = null,
-            initialSelectedEndDateMillis = null,
+            initialSelectedStartDateMillis = from.toEpochMilli(),
+            initialSelectedEndDateMillis = until.toEpochMilli(),
             yearRange = IntRange(year, year + 1),
             initialDisplayedMonthMillis = initialDisplayMonthMillis,
             selectableDates = object : SelectableDates {
@@ -93,6 +99,79 @@ fun NewLeaveSheet(
             }
         )
 
+        fun isValid(): Boolean {
+            // Check if we change something in the object
+            state.selectedStartDateMillis?.let { from ->
+                state.selectedEndDateMillis?.let { until ->
+                    if (leave.from != from.toLocalDate()
+                            .toString() || leave.until != until.toLocalDate().toString()
+                    ) {
+                        return true
+                    }
+                }
+            }
+
+            return false
+        }
+
+        if (openDeleteDialog.value) {
+            AlertDialog(
+                onDismissRequest = {
+                    openDeleteDialog.value = false
+                },
+                title = { Text(text = stringResource(id = R.string.delete_leave_dialog_title)) },
+                text = {
+                    Text(
+                        stringResource(id = R.string.delete_leave_dialog_description)
+                    )
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            openDeleteDialog.value = false
+                            isLoading = true
+
+                            scope.launch {
+                                viewModel.deleteLeave(year.toString(), leave)
+                                    .collect {
+                                        withContext(Dispatchers.Main) {
+                                            isLoading = false
+
+                                            if (it) {
+                                                Toast.makeText(
+                                                    context,
+                                                    R.string.delete_leave_result,
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+
+                                                scope.launch { bottomSheetState.hide() }
+                                            } else {
+                                                Toast.makeText(
+                                                    context,
+                                                    R.string.generic_error_toast,
+                                                    Toast.LENGTH_LONG
+                                                ).show()
+                                            }
+                                        }
+                                    }
+                            }
+                        }
+                    ) {
+                        Text(stringResource(id = R.string.confirm))
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = {
+                            openDeleteDialog.value = false
+                        }
+                    ) {
+                        Text(stringResource(id = R.string.dismiss))
+                    }
+                }
+            )
+        }
+
         ModalBottomSheet(
             onDismissRequest = { scope.launch { bottomSheetState.hide() } },
             sheetState = bottomSheetState,
@@ -106,7 +185,7 @@ fun NewLeaveSheet(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    stringResource(id = R.string.new_leave),
+                    stringResource(id = R.string.edit_leave),
                     style = MaterialTheme.typography.headlineMedium
                 )
 
@@ -126,34 +205,45 @@ fun NewLeaveSheet(
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End,
-                    modifier = Modifier.fillMaxWidth()
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = paddingLarge)
                 ) {
+                    OutlinedButton(
+                        onClick = { openDeleteDialog.value = true },
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(ButtonDefaults.IconSize)
+                        )
+                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                        Text(stringResource(id = R.string.delete))
+                    }
+
                     Button(
-                        enabled = state.selectedStartDateMillis != null && !isLoading,
+                        enabled = isValid(),
                         onClick = {
                             isLoading = true
 
-                            val newLeave = Leave(
-                                id = null,
-                                from = state.selectedStartDateMillis?.toLocalDate().toString(),
-                                until = state.selectedEndDateMillis?.toLocalDate().toString(),
-                                days = calculateWorkingDays(
-                                    state.selectedStartDateMillis?.toLocalDate(),
-                                    state.selectedEndDateMillis?.toLocalDate()
-                                )
+                            // Update leave object
+                            leave.from = state.selectedStartDateMillis?.toLocalDate().toString()
+                            leave.until = state.selectedEndDateMillis?.toLocalDate().toString()
+                            leave.days = calculateWorkingDays(
+                                state.selectedStartDateMillis?.toLocalDate(),
+                                state.selectedEndDateMillis?.toLocalDate()
                             )
 
                             scope.launch {
-                                viewModel.addLeave(year.toString(), newLeave)
+                                viewModel.updateLeave(year.toString(), leave)
                                     .collect {
-                                        isLoading = false
-
                                         withContext(Dispatchers.Main) {
+                                            isLoading = false
                                             if (it) {
                                                 Toast.makeText(
                                                     context,
-                                                    R.string.add_leave_result,
+                                                    R.string.update_leave_result,
                                                     Toast.LENGTH_LONG
                                                 ).show()
 
@@ -171,12 +261,12 @@ fun NewLeaveSheet(
                         },
                     ) {
                         Icon(
-                            Icons.Filled.Add,
+                            Icons.Filled.Save,
                             contentDescription = null,
                             modifier = Modifier.size(ButtonDefaults.IconSize)
                         )
                         Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                        Text(stringResource(id = R.string.create))
+                        Text(stringResource(id = R.string.update))
                     }
                 }
             }

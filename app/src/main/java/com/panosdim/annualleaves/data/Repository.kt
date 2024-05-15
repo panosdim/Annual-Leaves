@@ -107,16 +107,13 @@ class Repository {
 
         val listener = dbRef?.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val items = mutableListOf<Leave>()
-                snapshot.children.forEach { flat ->
-                    val itm = flat.getValue(Leave::class.java)
-                    if (itm != null) {
-                        itm.id = flat.key.toString()
-                        items.add(itm)
-                    }
+                val leaves = snapshot.children.mapNotNull { dataSnapshot ->
+                    val itm = dataSnapshot.getValue(Leave::class.java)
+                    itm?.id = dataSnapshot.key.toString()
+                    return@mapNotNull itm
                 }
 
-                trySend(items)
+                trySend(leaves)
             }
 
             override fun onCancelled(error: DatabaseError) {
@@ -164,8 +161,11 @@ class Repository {
                 database.getReference(it.uid).child(LEAVES).child(year).child(id)
             }
         }
+        val parentRef = dbRef?.parent
 
-        dbRef?.setValue(leave)
+        dbRef?.removeValue()
+        leave.id = null
+        parentRef?.push()?.setValue(leave)
             ?.addOnSuccessListener {
                 trySend(true)
                 cancel()
@@ -174,7 +174,6 @@ class Repository {
                 trySend(false)
                 cancel()
             }
-        dbRef?.child("id")?.removeValue()
 
         awaitClose {
             channel.close()
@@ -182,7 +181,6 @@ class Repository {
     }
 
     fun deleteLeave(year: String, leave: Leave): Flow<Boolean> = callbackFlow {
-        // Delete expenses connected with flat
         val dbRef = user?.let {
             leave.id?.let { id ->
                 database.getReference(it.uid).child(LEAVES).child(year).child(id)

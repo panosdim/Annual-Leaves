@@ -161,66 +161,6 @@ fun MainScreen(onComplete: BroadcastReceiver) {
             }
         }
 
-        Text(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = paddingLarge),
-            text = resources.getString(
-                R.string.annual_leaves,
-                selectedYear.toString()
-            ),
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.headlineMedium,
-        )
-
-        // Show Leaves
-        LazyColumn(
-            Modifier
-                .fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = paddingLarge, vertical = paddingLarge),
-            state = listState
-        ) {
-            if (leaves.isNotEmpty()) {
-                leaves.iterator().forEachRemaining { leave ->
-                    item {
-                        ListItem(
-                            headlineContent = {
-                                Text(leave.from.formatDate() + " - " + leave.until.formatDate())
-                            },
-                            trailingContent = {
-                                Text(
-                                    text = leave.days.toString(),
-                                    style = MaterialTheme.typography.headlineSmall,
-                                )
-                            },
-                            modifier = Modifier.clickable {
-                                selectedLeave = leave
-                                scope.launch { editLeaveSheetState.show() }
-                            }
-                        )
-                        HorizontalDivider()
-                    }
-                }
-            } else {
-                item {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Info,
-                            contentDescription = stringResource(id = R.string.no_leaves),
-                            modifier = Modifier
-                        )
-                        Text(
-                            text = stringResource(id = R.string.no_leaves)
-                        )
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.weight(1f))
         Card(
             modifier = Modifier
                 .padding(paddingLarge)
@@ -233,94 +173,175 @@ fun MainScreen(onComplete: BroadcastReceiver) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = paddingLarge),
-                    text = stringResource(id = R.string.remaining_annual_leaves),
+                    text = resources.getString(
+                        R.string.annual_leaves,
+                        selectedYear.toString()
+                    ),
                     textAlign = TextAlign.Center,
                     style = MaterialTheme.typography.headlineMedium,
                 )
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(paddingLarge),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Text(
-                        modifier = Modifier.padding(paddingSmall),
-                        text = calculateRemainingAnnualLeaves().toString(),
-                        fontWeight = FontWeight.Bold
-                    )
-                    VerticalDivider(Modifier.padding(paddingSmall))
-                    LinearProgressIndicator(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(paddingSmall),
-                        progress = { calculateRemainingAnnualLeaves().toFloat() / totalAnnualLeaves.value.toFloat() },
-                    )
-                    Text(
-                        modifier = Modifier.padding(paddingSmall),
-                        text = "${((calculateRemainingAnnualLeaves().toFloat() / totalAnnualLeaves.value.toFloat()) * 100).roundToInt()}%"
-                    )
-                }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(paddingLarge),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                // Show Leaves
+                LazyColumn(
+                    Modifier
+                        .fillMaxWidth(),
+                    contentPadding = PaddingValues(
+                        horizontal = paddingLarge,
+                        vertical = paddingLarge
+                    ),
+                    state = listState
                 ) {
-                    ExposedDropdownMenuBox(
-                        expanded = expandedYear,
-                        onExpandedChange = { expandedYear = !expandedYear },
-                    ) {
-                        ElevatedFilterChip(
-                            modifier = Modifier.menuAnchor(),
-                            selected = false,
-                            onClick = { },
-                            label = { Text(selectedYear.toString()) },
-                            leadingIcon = { Icon(Icons.Default.CalendarMonth, null) },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedYear) },
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expandedYear,
-                            onDismissRequest = { expandedYear = false },
-                        ) {
-                            optionsYear.value.forEach { selectionOption ->
-                                DropdownMenuItem(
-                                    text = { Text(selectionOption.toString()) },
-                                    onClick = {
-                                        selectedYear = selectionOption
-                                        expandedYear = false
+                    if (leaves.isNotEmpty()) {
+                        leaves.iterator().forEachRemaining { leave ->
+                            item {
+                                ListItem(
+                                    headlineContent = {
+                                        Text(leave.from.formatDate() + " - " + leave.until.formatDate())
                                     },
-                                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                                    trailingContent = {
+                                        Text(
+                                            text = leave.days.toString(),
+                                            style = MaterialTheme.typography.headlineSmall,
+                                        )
+                                    },
+                                    modifier = Modifier.clickable {
+                                        selectedLeave = leave
+                                        scope.launch { editLeaveSheetState.show() }
+                                    }
+                                )
+                                HorizontalDivider()
+                            }
+                        }
+                    } else {
+                        item {
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Info,
+                                    contentDescription = stringResource(id = R.string.no_leaves),
+                                    modifier = Modifier
+                                )
+                                Text(
+                                    text = stringResource(id = R.string.no_leaves)
                                 )
                             }
                         }
                     }
+                }
+            }
+        }
 
-                    Button(onClick = {
-                        scope.launch { newLeaveSheetState.show() }
-                    }) {
-                        Icon(
-                            Icons.Outlined.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(ButtonDefaults.IconSize)
-                        )
-                        Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+        Spacer(Modifier.weight(1f))
+        Card(
+            modifier = Modifier
+                .padding(paddingLarge)
+                .fillMaxWidth()
+                .wrapContentHeight(),
+            shape = MaterialTheme.shapes.medium,
+        ) {
+            Card(
+                modifier = Modifier
+                    .padding(paddingLarge)
+                    .fillMaxWidth()
+                    .wrapContentHeight(),
+                shape = MaterialTheme.shapes.medium,
+            ) {
+                Column {
+                    Text(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = paddingLarge),
+                        text = stringResource(id = R.string.remaining_annual_leaves),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.headlineMedium,
+                    )
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(paddingLarge),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Text(
-                            stringResource(id = R.string.new_leave)
+                            modifier = Modifier.padding(paddingSmall),
+                            text = calculateRemainingAnnualLeaves().toString(),
+                            fontWeight = FontWeight.Bold
                         )
+                        VerticalDivider(Modifier.padding(paddingSmall))
+                        LinearProgressIndicator(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(paddingSmall),
+                            progress = { calculateRemainingAnnualLeaves().toFloat() / totalAnnualLeaves.value.toFloat() },
+                        )
+                        Text(
+                            modifier = Modifier.padding(paddingSmall),
+                            text = "${((calculateRemainingAnnualLeaves().toFloat() / totalAnnualLeaves.value.toFloat()) * 100).roundToInt()}%"
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(paddingLarge),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        ExposedDropdownMenuBox(
+                            expanded = expandedYear,
+                            onExpandedChange = { expandedYear = !expandedYear },
+                        ) {
+                            ElevatedFilterChip(
+                                modifier = Modifier.menuAnchor(),
+                                selected = false,
+                                onClick = { },
+                                label = { Text(selectedYear.toString()) },
+                                leadingIcon = { Icon(Icons.Default.CalendarMonth, null) },
+                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedYear) },
+                            )
+                            ExposedDropdownMenu(
+                                expanded = expandedYear,
+                                onDismissRequest = { expandedYear = false },
+                            ) {
+                                optionsYear.value.forEach { selectionOption ->
+                                    DropdownMenuItem(
+                                        text = { Text(selectionOption.toString()) },
+                                        onClick = {
+                                            selectedYear = selectionOption
+                                            expandedYear = false
+                                        },
+                                        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
+                                    )
+                                }
+                            }
+                        }
+
+                        Button(onClick = {
+                            scope.launch { newLeaveSheetState.show() }
+                        }) {
+                            Icon(
+                                Icons.Outlined.Add,
+                                contentDescription = null,
+                                modifier = Modifier.size(ButtonDefaults.IconSize)
+                            )
+                            Spacer(Modifier.size(ButtonDefaults.IconSpacing))
+                            Text(
+                                stringResource(id = R.string.new_leave)
+                            )
+                        }
                     }
                 }
             }
         }
+
+        SettingsSheet(bottomSheetState = settingsSheetState)
+        NewLeaveSheet(year = selectedYear, bottomSheetState = newLeaveSheetState)
+        EditLeaveSheet(
+            year = selectedYear,
+            leave = selectedLeave,
+            bottomSheetState = editLeaveSheetState
+        )
     }
-
-    SettingsSheet(bottomSheetState = settingsSheetState)
-    NewLeaveSheet(year = selectedYear, bottomSheetState = newLeaveSheetState)
-    EditLeaveSheet(
-        year = selectedYear,
-        leave = selectedLeave,
-        bottomSheetState = editLeaveSheetState
-    )
-
 }

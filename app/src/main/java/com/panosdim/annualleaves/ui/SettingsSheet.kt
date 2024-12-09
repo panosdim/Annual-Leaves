@@ -39,13 +39,15 @@ import kotlin.math.roundToInt
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsSheet(
+    year: Int,
     bottomSheetState: SheetState
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val viewModel: MainViewModel = viewModel()
     val totalAnnualLeaves =
-        viewModel.getTotalAnnualLeaves().collectAsStateWithLifecycle(initialValue = 20)
+        viewModel.getTotalAnnualLeaves(year.toString())
+            .collectAsStateWithLifecycle(initialValue = 20)
 
     var sliderPosition by remember { mutableFloatStateOf(totalAnnualLeaves.value.toFloat()) }
     sliderPosition = totalAnnualLeaves.value.toFloat()
@@ -56,24 +58,25 @@ fun SettingsSheet(
             onDismissRequest = {
                 scope.launch {
                     if (sliderPosition.toInt() != totalAnnualLeaves.value) {
-                        viewModel.setTotalAnnualLeaves(sliderPosition.toInt()).collect {
-                            withContext(Dispatchers.Main) {
-                                if (it) {
-                                    Toast.makeText(
-                                        context,
-                                        R.string.success_set_total_annual_leaves_toast,
-                                        Toast.LENGTH_LONG
-                                    ).show()
-                                    bottomSheetState.hide()
-                                } else {
-                                    Toast.makeText(
-                                        context,
-                                        R.string.error_set_total_annual_leaves_toast,
-                                        Toast.LENGTH_LONG
-                                    ).show()
+                        viewModel.setTotalAnnualLeaves(year.toString(), sliderPosition.toInt())
+                            .collect {
+                                withContext(Dispatchers.Main) {
+                                    if (it) {
+                                        Toast.makeText(
+                                            context,
+                                            R.string.success_set_total_annual_leaves_toast,
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                        bottomSheetState.hide()
+                                    } else {
+                                        Toast.makeText(
+                                            context,
+                                            R.string.error_set_total_annual_leaves_toast,
+                                            Toast.LENGTH_LONG
+                                        ).show()
+                                    }
                                 }
                             }
-                        }
                     }
                 }
             },

@@ -17,9 +17,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import java.time.LocalDate
 
 const val LEAVES = "leaves"
-const val INFO = "info"
 const val TOTAL_ANNUAL_LEAVES = "total-annual-leaves"
-const val STARTING_YEAR = "starting-year"
 
 class Repository {
     private val user = Firebase.auth.currentUser
@@ -27,16 +25,17 @@ class Repository {
     private var listeners: MutableMap<DatabaseReference, ValueEventListener> = mutableMapOf()
 
     fun years(): Flow<List<Int>> = callbackFlow {
-        val dbRef = user?.let { database.getReference(it.uid).child(INFO).child(STARTING_YEAR) }
+        val dbRef = user?.let { database.getReference(it.uid).child(LEAVES) }
         val today = LocalDate.now()
 
-        dbRef?.get()?.addOnSuccessListener {
-            if (it.exists()) {
-                val startYear = it.value as Long
+        dbRef?.get()?.addOnSuccessListener { snapshot ->
+            if (snapshot.exists()) {
+                val years = snapshot.children.mapNotNull { it.key?.toIntOrNull() }
+                    .sorted() // Sort the years
+                val startYear = years.first()
                 val endYear = today.plusYears(1).year
-                trySend((startYear.toInt()..endYear).toList())
+                trySend((startYear..endYear).toList())
             } else {
-                dbRef.setValue(today.year)
                 trySend(listOf(today.year, today.plusYears(1).year))
             }
         }?.addOnFailureListener {
@@ -48,9 +47,11 @@ class Repository {
         }
     }
 
-    fun getTotalAnnualLeaves(): Flow<Int> = callbackFlow {
+    fun getTotalAnnualLeaves(year: String): Flow<Int> = callbackFlow {
         val dbRef =
-            user?.let { database.getReference(it.uid).child(INFO).child(TOTAL_ANNUAL_LEAVES) }
+            user?.let {
+                database.getReference(it.uid).child(LEAVES).child(year).child(TOTAL_ANNUAL_LEAVES)
+            }
 
         val listener = dbRef?.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -58,8 +59,26 @@ class Repository {
                     val total = snapshot.value as Long
                     trySend(total.toInt())
                 } else {
-                    dbRef.setValue(20)
-                    trySend(20)
+                    // Fetch from previous year using a single read
+                    val previousYear = (year.toInt() - 1).toString()
+                    val previousYearRef = user?.let {
+                        database.getReference(it.uid).child(LEAVES).child(previousYear)
+                            .child(TOTAL_ANNUAL_LEAVES)
+                    }
+
+                    previousYearRef?.addListenerForSingleValueEvent(object : ValueEventListener {
+                        override fun onDataChange(previousSnapshot: DataSnapshot) {
+                            val previousYearTotal =
+                                if (previousSnapshot.exists()) (previousSnapshot.value as Long).toInt() else 20
+                            dbRef.setValue(previousYearTotal) // Set current year value
+                            trySend(previousYearTotal)
+                        }
+
+                        override fun onCancelled(error: DatabaseError) {
+                            Log.e(TAG, error.toString())
+                            cancel()
+                        }
+                    })
                 }
             }
 
@@ -82,9 +101,11 @@ class Repository {
         }
     }
 
-    fun setTotalAnnualLeaves(total: Int): Flow<Boolean> = callbackFlow {
+    fun setTotalAnnualLeaves(year: String, total: Int): Flow<Boolean> = callbackFlow {
         val dbRef =
-            user?.let { database.getReference(it.uid).child(INFO).child(TOTAL_ANNUAL_LEAVES) }
+            user?.let {
+                database.getReference(it.uid).child(LEAVES).child(year).child(TOTAL_ANNUAL_LEAVES)
+            }
 
         dbRef?.setValue(total)
             ?.addOnSuccessListener {
@@ -108,9 +129,13 @@ class Repository {
         val listener = dbRef?.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val leaves = snapshot.children.mapNotNull { dataSnapshot ->
-                    val itm = dataSnapshot.getValue(Leave::class.java)
-                    itm?.id = dataSnapshot.key.toString()
-                    return@mapNotNull itm
+                    if (dataSnapshot.key != TOTAL_ANNUAL_LEAVES) {
+                        val itm = dataSnapshot.getValue(Leave::class.java)
+                        itm?.id = dataSnapshot.key.toString()
+                        return@mapNotNull itm
+                    } else {
+                        null
+                    }
                 }
 
                 trySend(leaves)

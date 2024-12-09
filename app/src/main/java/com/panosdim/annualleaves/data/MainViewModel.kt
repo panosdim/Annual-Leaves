@@ -10,9 +10,10 @@ class MainViewModel : ViewModel() {
 
     fun getLeaves(year: String) = repository.getLeaves(year)
 
-    fun getTotalAnnualLeaves() = repository.getTotalAnnualLeaves()
+    fun getTotalAnnualLeaves(year: String) = repository.getTotalAnnualLeaves(year)
 
-    fun setTotalAnnualLeaves(total: Int) = repository.setTotalAnnualLeaves(total)
+    fun setTotalAnnualLeaves(year: String, total: Int) =
+        repository.setTotalAnnualLeaves(year, total)
 
     fun years() = repository.years()
 

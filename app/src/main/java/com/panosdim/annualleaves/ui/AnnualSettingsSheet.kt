@@ -38,7 +38,7 @@ import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsSheet(
+fun AnnualSettingsSheet(
     year: Int,
     bottomSheetState: SheetState
 ) {
@@ -46,7 +46,7 @@ fun SettingsSheet(
     val scope = rememberCoroutineScope()
     val viewModel: MainViewModel = viewModel()
     val totalAnnualLeaves =
-        viewModel.getTotalAnnualLeaves(year.toString())
+        viewModel.getTotalAnnualLeavesPerYear(year.toString())
             .collectAsStateWithLifecycle(initialValue = 20)
 
     var sliderPosition by remember { mutableFloatStateOf(totalAnnualLeaves.value.toFloat()) }
@@ -58,7 +58,10 @@ fun SettingsSheet(
             onDismissRequest = {
                 scope.launch {
                     if (sliderPosition.toInt() != totalAnnualLeaves.value) {
-                        viewModel.setTotalAnnualLeaves(year.toString(), sliderPosition.toInt())
+                        viewModel.setTotalAnnualLeavesPerYear(
+                            year.toString(),
+                            sliderPosition.toInt()
+                        )
                             .collect {
                                 withContext(Dispatchers.Main) {
                                     if (it) {

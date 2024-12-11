@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Button
@@ -18,10 +19,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberDateRangePickerState
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,12 +34,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.panosdim.annualleaves.R
 import com.panosdim.annualleaves.data.MainViewModel
-import com.panosdim.annualleaves.models.Leave
+import com.panosdim.annualleaves.models.ParentalLeave
 import com.panosdim.annualleaves.paddingLarge
-import com.panosdim.annualleaves.utils.calculateWorkingDays
 import com.panosdim.annualleaves.utils.getHolidays
 import com.panosdim.annualleaves.utils.toEpochMilli
 import com.panosdim.annualleaves.utils.toLocalDate
@@ -52,7 +57,7 @@ import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NewLeaveSheet(
+fun NewParentalLeaveSheet(
     year: Int,
     bottomSheetState: SheetState
 ) {
@@ -69,29 +74,29 @@ fun NewLeaveSheet(
     } else {
         LocalDate.of(year, Month.JANUARY, 1).toEpochMilli()
     }
-
+    
     // Sheet content
     if (bottomSheetState.isVisible) {
-        val state = rememberDateRangePickerState(
-            initialSelectedStartDateMillis = null,
-            initialSelectedEndDateMillis = null,
-            yearRange = IntRange(year, year + 1),
-            initialDisplayedMonthMillis = initialDisplayMonthMillis,
-            selectableDates = object : SelectableDates {
-                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                    val date = Instant.ofEpochMilli(utcTimeMillis).atZone(ZoneId.systemDefault())
-                        .toLocalDate()
-                    val nextYearDate = LocalDate.of(year + 1, Month.MARCH, 31)
+        val datePickerState =
+            rememberDatePickerState(initialSelectedDateMillis = null,
+                yearRange = IntRange(year, year + 1),
+                initialDisplayedMonthMillis = initialDisplayMonthMillis,
+                selectableDates = object : SelectableDates {
+                    override fun isSelectableDate(utcTimeMillis: Long): Boolean {
+                        val date =
+                            Instant.ofEpochMilli(utcTimeMillis).atZone(ZoneId.systemDefault())
+                                .toLocalDate()
+                        val nextYearDate = LocalDate.of(year + 1, Month.MARCH, 31)
 
-                    val holidays = getHolidays(year)
+                        val holidays = getHolidays(year)
 
-                    return (date.isBefore(nextYearDate) || date.isEqual(nextYearDate))
-                            && !holidays.contains(date)
-                            && date.dayOfWeek != DayOfWeek.SATURDAY
-                            && date.dayOfWeek != DayOfWeek.SUNDAY
-                }
-            }
-        )
+                        return (date.isBefore(nextYearDate) || date.isEqual(nextYearDate))
+                                && !holidays.contains(date)
+                                && date.dayOfWeek != DayOfWeek.SATURDAY
+                                && date.dayOfWeek != DayOfWeek.SUNDAY
+                    }
+                })
+        var childName by remember { mutableStateOf("") }
 
         ModalBottomSheet(
             onDismissRequest = { scope.launch { bottomSheetState.hide() } },
@@ -106,14 +111,29 @@ fun NewLeaveSheet(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    stringResource(id = R.string.new_leave),
+                    stringResource(id = R.string.new_parental_leave),
                     style = MaterialTheme.typography.headlineMedium
                 )
 
-                OutlinedDateRangePicker(
-                    state = state,
-                    label = "Annual Leave Dates",
+                OutlinedDatePicker(
+                    state = datePickerState,
+                    label = stringResource(id = R.string.parental_leave_date),
                     modifier = Modifier.fillMaxWidth()
+                )
+
+                OutlinedTextField(
+                    value = childName,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Text,
+                        capitalization = KeyboardCapitalization.Words,
+                        imeAction = ImeAction.Done
+                    ),
+                    singleLine = true,
+                    onValueChange = { childName = it },
+                    label = { Text(stringResource(id = R.string.child_name)) },
+                    modifier = Modifier
+                        .padding(bottom = 8.dp)
+                        .fillMaxWidth()
                 )
 
                 if (isLoading) {
@@ -130,18 +150,14 @@ fun NewLeaveSheet(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Button(
-                        enabled = state.selectedStartDateMillis != null && !isLoading,
+                        enabled = datePickerState.selectedDateMillis != null && childName.isNotBlank() && !isLoading,
                         onClick = {
                             isLoading = true
 
-                            val newLeave = Leave(
+                            val newLeave = ParentalLeave(
                                 id = null,
-                                from = state.selectedStartDateMillis?.toLocalDate().toString(),
-                                until = state.selectedEndDateMillis?.toLocalDate().toString(),
-                                days = calculateWorkingDays(
-                                    state.selectedStartDateMillis?.toLocalDate(),
-                                    state.selectedEndDateMillis?.toLocalDate()
-                                )
+                                date = datePickerState.selectedDateMillis?.toLocalDate().toString(),
+                                childName = childName
                             )
 
                             scope.launch {
@@ -153,7 +169,7 @@ fun NewLeaveSheet(
                                             if (it) {
                                                 Toast.makeText(
                                                     context,
-                                                    R.string.add_leave_result,
+                                                    R.string.add_parental_leave_result,
                                                     Toast.LENGTH_LONG
                                                 ).show()
 

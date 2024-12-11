@@ -39,7 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.panosdim.annualleaves.R
 import com.panosdim.annualleaves.data.MainViewModel
-import com.panosdim.annualleaves.models.Leave
+import com.panosdim.annualleaves.models.AnnualLeave
 import com.panosdim.annualleaves.paddingLarge
 import com.panosdim.annualleaves.utils.calculateWorkingDays
 import com.panosdim.annualleaves.utils.getHolidays
@@ -56,9 +56,9 @@ import java.time.ZoneId
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EditLeaveSheet(
+fun EditAnnualLeaveSheet(
     year: Int,
-    leave: Leave,
+    leave: AnnualLeave,
     bottomSheetState: SheetState
 ) {
     val context = LocalContext.current
@@ -119,10 +119,10 @@ fun EditLeaveSheet(
                 onDismissRequest = {
                     openDeleteDialog.value = false
                 },
-                title = { Text(text = stringResource(id = R.string.delete_leave_dialog_title)) },
+                title = { Text(text = stringResource(id = R.string.delete_annual_leave_dialog_title)) },
                 text = {
                     Text(
-                        stringResource(id = R.string.delete_leave_dialog_description)
+                        stringResource(id = R.string.delete_annual_leave_dialog_description)
                     )
                 },
                 confirmButton = {
@@ -140,7 +140,7 @@ fun EditLeaveSheet(
                                             if (it) {
                                                 Toast.makeText(
                                                     context,
-                                                    R.string.delete_leave_result,
+                                                    R.string.delete_annual_leave_result,
                                                     Toast.LENGTH_LONG
                                                 ).show()
 
@@ -185,7 +185,7 @@ fun EditLeaveSheet(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    stringResource(id = R.string.edit_leave),
+                    stringResource(id = R.string.edit_annual_leave),
                     style = MaterialTheme.typography.headlineMedium
                 )
 
@@ -243,7 +243,7 @@ fun EditLeaveSheet(
                                             if (it) {
                                                 Toast.makeText(
                                                     context,
-                                                    R.string.update_leave_result,
+                                                    R.string.update_annual_leave_result,
                                                     Toast.LENGTH_LONG
                                                 ).show()
 

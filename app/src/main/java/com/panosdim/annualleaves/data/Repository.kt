@@ -9,23 +9,42 @@ import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.ktx.database
 import com.google.firebase.ktx.Firebase
 import com.panosdim.annualleaves.TAG
+import com.panosdim.annualleaves.models.AnnualLeave
 import com.panosdim.annualleaves.models.Leave
+import com.panosdim.annualleaves.models.ParentalLeave
+import com.panosdim.annualleaves.selectedTab
+import com.panosdim.annualleaves.utils.TabNames
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import java.time.LocalDate
 
-const val LEAVES = "leaves"
-const val TOTAL_ANNUAL_LEAVES = "total-annual-leaves"
+const val TOTAL_LEAVES_PER_YEAR = "total-leaves-per-year"
+const val ANNUAL_LEAVES_KEY = "annual"
+const val PARENTAL_LEAVES_KEY = "parental"
 
 class Repository {
     private val user = Firebase.auth.currentUser
     private val database = Firebase.database
     private var listeners: MutableMap<DatabaseReference, ValueEventListener> = mutableMapOf()
 
-    fun years(): Flow<List<Int>> = callbackFlow {
-        val dbRef = user?.let { database.getReference(it.uid).child(LEAVES) }
+    private fun getLeavesPath(tab: TabNames): String {
+        return when (tab) {
+            TabNames.ANNUAL_LEAVES -> ANNUAL_LEAVES_KEY
+            TabNames.PARENTAL_LEAVES -> PARENTAL_LEAVES_KEY
+        }
+    }
+
+    private fun getLeavesClass(tab: TabNames): Class<out Leave> {
+        return when (tab) {
+            TabNames.ANNUAL_LEAVES -> AnnualLeave::class.java
+            TabNames.PARENTAL_LEAVES -> ParentalLeave::class.java
+        }
+    }
+
+    fun years(tab: TabNames): Flow<List<Int>> = callbackFlow {
+        val dbRef = user?.let { database.getReference(it.uid).child(getLeavesPath(tab)) }
         val today = LocalDate.now()
 
         dbRef?.get()?.addOnSuccessListener { snapshot ->
@@ -47,10 +66,16 @@ class Repository {
         }
     }
 
-    fun getTotalAnnualLeaves(year: String): Flow<Int> = callbackFlow {
+    fun getTotalLeavesPerYear(year: String, tab: TabNames): Flow<Int> = callbackFlow {
+        val defaultTotalValue = when (tab) {
+            TabNames.ANNUAL_LEAVES -> 20
+            TabNames.PARENTAL_LEAVES -> 4
+        }
+
         val dbRef =
             user?.let {
-                database.getReference(it.uid).child(LEAVES).child(year).child(TOTAL_ANNUAL_LEAVES)
+                database.getReference(it.uid).child(getLeavesPath(tab)).child(year)
+                    .child(TOTAL_LEAVES_PER_YEAR)
             }
 
         val listener = dbRef?.addValueEventListener(object : ValueEventListener {
@@ -62,14 +87,15 @@ class Repository {
                     // Fetch from previous year using a single read
                     val previousYear = (year.toInt() - 1).toString()
                     val previousYearRef = user?.let {
-                        database.getReference(it.uid).child(LEAVES).child(previousYear)
-                            .child(TOTAL_ANNUAL_LEAVES)
+                        database.getReference(it.uid).child(getLeavesPath(tab))
+                            .child(previousYear)
+                            .child(TOTAL_LEAVES_PER_YEAR)
                     }
 
                     previousYearRef?.addListenerForSingleValueEvent(object : ValueEventListener {
                         override fun onDataChange(previousSnapshot: DataSnapshot) {
                             val previousYearTotal =
-                                if (previousSnapshot.exists()) (previousSnapshot.value as Long).toInt() else 20
+                                if (previousSnapshot.exists()) (previousSnapshot.value as Long).toInt() else defaultTotalValue
                             dbRef.setValue(previousYearTotal) // Set current year value
                             trySend(previousYearTotal)
                         }
@@ -101,36 +127,41 @@ class Repository {
         }
     }
 
-    fun setTotalAnnualLeaves(year: String, total: Int): Flow<Boolean> = callbackFlow {
+    fun setTotalLeavesPerYear(year: String, total: Int, tab: TabNames): Flow<Boolean> =
+        callbackFlow {
+            val dbRef =
+                user?.let {
+                    database.getReference(it.uid).child(getLeavesPath(tab)).child(year)
+                        .child(TOTAL_LEAVES_PER_YEAR)
+                }
+
+            dbRef?.setValue(total)
+                ?.addOnSuccessListener {
+                    trySend(true)
+                    cancel()
+                }
+                ?.addOnFailureListener {
+                    trySend(false)
+                    cancel()
+                }
+
+            awaitClose {
+                channel.close()
+            }
+        }
+
+    fun getLeaves(year: String, tab: TabNames): Flow<List<Leave>> = callbackFlow {
         val dbRef =
             user?.let {
-                database.getReference(it.uid).child(LEAVES).child(year).child(TOTAL_ANNUAL_LEAVES)
+                database.getReference(it.uid).child(getLeavesPath(tab)).child(year)
             }
-
-        dbRef?.setValue(total)
-            ?.addOnSuccessListener {
-                trySend(true)
-                cancel()
-            }
-            ?.addOnFailureListener {
-                trySend(false)
-                cancel()
-            }
-
-        awaitClose {
-            channel.close()
-        }
-    }
-
-    fun getLeaves(year: String): Flow<List<Leave>> = callbackFlow {
-        val dbRef =
-            user?.let { database.getReference(it.uid).child(LEAVES).child(year) }
 
         val listener = dbRef?.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
+                val leaveClass = getLeavesClass(tab)
                 val leaves = snapshot.children.mapNotNull { dataSnapshot ->
-                    if (dataSnapshot.key != TOTAL_ANNUAL_LEAVES) {
-                        val itm = dataSnapshot.getValue(Leave::class.java)
+                    if (dataSnapshot.key != TOTAL_LEAVES_PER_YEAR) {
+                        val itm = dataSnapshot.getValue(leaveClass)
                         itm?.id = dataSnapshot.key.toString()
                         return@mapNotNull itm
                     } else {
@@ -162,7 +193,7 @@ class Repository {
 
     fun addLeave(year: String, leave: Leave): Flow<Boolean> = callbackFlow {
         val dbRef = user?.let {
-            database.getReference(it.uid).child(LEAVES).child(year)
+            database.getReference(it.uid).child(getLeavesPath(selectedTab)).child(year)
         }
 
         dbRef?.push()?.setValue(leave)
@@ -183,7 +214,8 @@ class Repository {
     fun updateLeave(year: String, leave: Leave): Flow<Boolean> = callbackFlow {
         val dbRef = user?.let {
             leave.id?.let { id ->
-                database.getReference(it.uid).child(LEAVES).child(year).child(id)
+                database.getReference(it.uid).child(getLeavesPath(selectedTab)).child(year)
+                    .child(id)
             }
         }
         val parentRef = dbRef?.parent
@@ -208,7 +240,8 @@ class Repository {
     fun deleteLeave(year: String, leave: Leave): Flow<Boolean> = callbackFlow {
         val dbRef = user?.let {
             leave.id?.let { id ->
-                database.getReference(it.uid).child(LEAVES).child(year).child(id)
+                database.getReference(it.uid).child(getLeavesPath(selectedTab)).child(year)
+                    .child(id)
             }
         }
 
@@ -224,14 +257,6 @@ class Repository {
 
         awaitClose {
             channel.close()
-        }
-    }
-
-    fun signOut() {
-        listeners.let { list ->
-            list.forEach {
-                it.key.removeEventListener(it.value)
-            }
         }
     }
 }

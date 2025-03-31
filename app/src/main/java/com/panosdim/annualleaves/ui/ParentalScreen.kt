@@ -31,6 +31,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.Text
@@ -138,7 +139,7 @@ fun ParentalScreen() {
                     state = listState
                 ) {
                     if (leaves.isNotEmpty()) {
-                        leaves.iterator().forEachRemaining { leave ->
+                        leaves.forEachIndexed { index, leave ->
                             item {
                                 ListItem(
                                     headlineContent = {
@@ -153,9 +154,12 @@ fun ParentalScreen() {
                                     modifier = Modifier.clickable {
                                         selectedParentalLeave = leave
                                         scope.launch { editParentalLeaveSheetState.show() }
-                                    }
+                                    },
+                                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerHighest)
                                 )
-                                HorizontalDivider()
+                                if (index < leaves.size - 1) {
+                                    HorizontalDivider()
+                                }
                             }
                         }
                     } else {
